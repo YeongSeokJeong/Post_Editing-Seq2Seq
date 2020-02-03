@@ -7,6 +7,10 @@ import time
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.layers import *
+from tensorflow.keras import Model
+from tensorflow
+
 BATCH_SIZE = 128
 embedding_dim = 300
 units =  500
@@ -143,107 +147,30 @@ class Decoder(tf.keras.Model):
         x = self.fc(output)
         return x, state, attention_weights
 
-optimizer = tf.keras.optimizers.Adam()
-# 최적화 함수 정의
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = True, reduction = 'none')
-def loss_function(real,pred):
-    mask = tf.math.logical_not(tf.math.equal(real,0))
-    loss_ = loss_object(real,pred)
-    
-    mask = tf.cast(mask,dtype = loss_.dtype)
-    loss_ *= mask
-    return tf.reduce_mean(loss_)
-# 손실함수 정의
 
-@tf.function
-def train_step(inp, targ, enc_hidden, batch_num, val_input = val_input, val_output = val_output):
-    loss = 0
+from tensorflow import keras
+from tensorflow.keras.layers import *
+from tensorflow.keras.models import Model
 
-    with tf.GradientTape() as tape:
-        enc_output, enc_hidden = encoder(inp, enc_hidden)
+inp = Input(shape = (input_max_len,),batch_size = BATCH_SIZE)
+encoder = Encoder(len(input_vocab), embedding_dim = embedding_dim, gru_hidden = units, batch_sz = BATCH_SIZE)
 
-        dec_hidden = enc_hidden
+enc_hidden = encoder.initialize_hidden_state()
+enc_output, enc_hidden = encoder(inp, enc_hidden)
 
-        dec_input = tf.expand_dims([dic_output_vocab['<start>']] * BATCH_SIZE, 1)
+decoder = Decoder(len(output_vocab), embedding_dim, units, BATCH_SIZE)
 
-        for t in range(1, targ.shape[1]):
-            predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
+dec_input = tf.expand_dims([dic_output_vocab['<start>']] * BATCH_SIZE, 1)
+dec_hidden = enc_hidden
 
-            loss += loss_function(targ[:, t], predictions)
+output_list = []
+# sentence = tf.reshape(sentence, shape = (128,))
+for t in range(1, output_max_len):
+    predictions, dec_hidden, _ = decoder(dec_input,dec_hidden, enc_output)
+    predictions = tf.argmax(predictions, 1)
+    output_list.append(predictions)
 
-            dec_input = tf.expand_dims(targ[:, t], 1)
-
-    batch_loss = (loss / int(targ.shape[1]))
-
-    variables = encoder.trainable_variables + decoder.trainable_variables
-
-    gradients = tape.gradient(loss, variables)
-
-    optimizer.apply_gradients(zip(gradients, variables))
-
-    if batch == len(input_tokens)//BATCH_SIZE -1 :
-        print('validation loss :', loss_function(val_input, val_output))
-    return batch_loss
-# 모델 훈련을 위한 함수 정의
-
-steps_per_epoch = len(input_tokens)//BATCH_SIZE
-
-EPOCHS = 5
-
-for epoch in range(EPOCHS):
-    start = time.time()
-
-    enc_hidden = encoder.initialize_hidden_state()
-    total_loss = 0
-
-    for batch in range(len(input_tokens)//BATCH_SIZE):
-        batch_input = input_tokens[batch*BATCH_SIZE: (batch+1)*BATCH_SIZE]
-        batch_output = output_tokens[batch*BATCH_SIZE: (batch+1)*BATCH_SIZE]
-
-        batch_loss = train_step(batch_input, batch_output, enc_hidden)
-        total_loss += batch_loss
-
-        if batch % 10 == 0:
-            print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
-                                                         batch,
-                                                         batch_loss.numpy()))
-    # saving (checkpoint) the model every 2 epochs
-    
-    print('Epoch {} Loss {:.4f}'.format(epoch + 1,
-                                      total_loss / steps_per_epoch))
-    print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
-
-def evaluate(sentence):
-    inp = preprocess(sentence)
-
-    inputs = tf.convert_to_tensor(inp)
-
-    result = ''
-    
-    hidden = [tf.zeros((1, units))]
-    enc_out, enc_hidden = encoder(inputs, hidden)
-
-    dec_hidden = enc_hidden
-    dec_input = tf.expand_dims([dic_input_vocab['<start>']], 0)
-
-    for t in range(output_max_len):
-        predictions, dec_hidden, attention_weights = decoder(dec_input, 
-                                                             dec_hidden,
-                                                             enc_out)
-        attention_weights = tf.reshape(attention_weights, (-1,))
-        
-
-        predicted_id = tf.argmax(predictions[0]).numpy()
-
-        result += output_vocab[predicted_id] + ' '
-        
-        if output_vocab[predicted_id] == '<end>':
-            return result, sentence
-        dec_input = tf.expand_dims([predicted_id], 0)
-
-    return result, sentence
-
-def translate(sentence):
-    result, sentence = evaluate(sentence)
-    print('Input: %s' % (sentence))
-    print('Predicted translation: {}'.format(result))
+outputs = tf.stack(output_list)
+print(outputs)
+model = Model([inp], outputs)
+model.compile(optimizer = keras.optimizers.Adam(), loss = 'sparse_categorical_crossentropy')
