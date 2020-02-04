@@ -247,3 +247,35 @@ def translate(sentence):
     result, sentence = evaluate(sentence)
     print('Input: %s' % (sentence))
     print('Predicted translation: {}'.format(result))
+
+
+
+def validation_loss(val_input = val_input, val_output = val_output):
+    val_loss = 0
+    for i in range(len(val_input)):
+        inputs = tf.convert_to_tensor([val_input[i]])
+
+        result = []
+
+        hidden = [tf.zeros((dic_input_vocab["<start>"], units))]
+
+        enc_out, enc_hidden = encoder(inputs, hidden)
+
+        dec_hidden = enc_hidden
+        dec_input = tf.expand_dims([dic_input_vocab["<start>"]], 0)
+
+        for t in range(output_max_len):
+            predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
+            
+            attention_weights = tf.reshape(attention_weights, (-1,))
+ 
+            predicted_id = tf.argmax(predictions[0]).numpy()
+
+            result.append(predicted_id)
+
+            dec_input = tf.expand_dims([predicted_id], 0)
+            print(dec_input)
+        val_loss = loss_function(val_output[i], result)
+
+    val_loss /= len(val_input)
+    return val_loss
