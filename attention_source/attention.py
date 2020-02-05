@@ -186,6 +186,38 @@ def train_step(inp, targ, enc_hidden, batch_num, val_input = val_input, val_outp
     return batch_loss
 # 모델 훈련을 위한 함수 정의
 
+def validation_loss(val_input = val_input, val_output = val_output):
+    val_loss = 0
+    for i in range(len(val_input)):
+        
+        inputs = tf.convert_to_tensor([val_input[i]])
+        
+        result = []
+
+        hidden = [tf.zeros((1, units))]
+        enc_out, enc_hidden = encoder(inputs, hidden)
+        dec_hidden = enc_hidden
+        dec_input = tf.expand_dims([dic_input_vocab["<start>"]], 0)
+        
+        step_loss = 0
+
+        for t in range(output_max_len):
+            predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
+            
+            attention_weights = tf.reshape(attention_weights, (-1,))
+
+            step_loss += loss_function(val_output[i][t], predictions).numpy()
+    
+            predictions_i =  tf.argmax(predictions[0]).numpy()
+            dec_input = tf.expand_dims([predictions_i], 0)
+            
+        step_loss = step_loss / output_max_len 
+        val_loss += step_loss
+    
+    val_loss /= len(val_input)
+    
+    return val_loss
+
 steps_per_epoch = len(input_tokens)//BATCH_SIZE
 
 EPOCHS = 5
@@ -211,8 +243,9 @@ for epoch in range(EPOCHS):
     
     print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                       total_loss / steps_per_epoch))
-    print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
-
+    print('Time taken for 1 epoch {} sec'.format(time.time() - start))
+    print('Validation loss :', validation_loss())
+    
 def evaluate(sentence):
     inp = preprocess(sentence)
 
@@ -250,32 +283,3 @@ def translate(sentence):
 
 
 
-def validation_loss(val_input = val_input, val_output = val_output):
-    val_loss = 0
-    for i in range(len(val_input)):
-        inputs = tf.convert_to_tensor([val_input[i]])
-
-        result = []
-
-        hidden = [tf.zeros((dic_input_vocab["<start>"], units))]
-
-        enc_out, enc_hidden = encoder(inputs, hidden)
-
-        dec_hidden = enc_hidden
-        dec_input = tf.expand_dims([dic_input_vocab["<start>"]], 0)
-
-        for t in range(output_max_len):
-            predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
-            
-            attention_weights = tf.reshape(attention_weights, (-1,))
- 
-            predicted_id = tf.argmax(predictions[0]).numpy()
-
-            result.append(predicted_id)
-
-            dec_input = tf.expand_dims([predicted_id], 0)
-            print(dec_input)
-        val_loss = loss_function(val_output[i], result)
-
-    val_loss /= len(val_input)
-    return val_loss
