@@ -14,8 +14,8 @@ units =  500
 
 data = pd.read_csv("data_new7.csv",encoding = 'cp949')
 
-input_data = data.iloc[:,0].to_list()[:10000]
-output_data = data.iloc[:,1].to_list()[:10000]
+input_data = data.iloc[:,0].to_list()
+output_data = data.iloc[:,1].to_list()
 input_vocab,output_vocab = set(),set()
 input_max_len = 0
 output_max_len = 0
