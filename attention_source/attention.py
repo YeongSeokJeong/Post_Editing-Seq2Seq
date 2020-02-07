@@ -1,12 +1,14 @@
 import pandas as pd
 import numpy as np
-from keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 import tensorflow as tf
 from konlpy.tag import Kkma
 import time
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 from sklearn.model_selection import train_test_split
+from addition_data import * 
+import pickle
 BATCH_SIZE = 128
 embedding_dim = 300
 units =  500
@@ -16,63 +18,108 @@ data = pd.read_csv("data_new7.csv",encoding = 'cp949')
 
 input_data = data.iloc[:,0].to_list()
 output_data = data.iloc[:,1].to_list()
+
 input_vocab,output_vocab = set(),set()
 input_max_len = 0
 output_max_len = 0
-
-
 kkma = Kkma()
-morphs_input_sentence = []
-morphs_output_sentence = []
 
-for input_sentence,output_sentence in zip(input_data,output_data):
-    input_sentence = kkma.morphs(input_sentence)
-    output_sentence = kkma.morphs(output_sentence)
-    # Kkma 분석기를 사용한 형태소 분석
-    morphs_input_sentence.append(input_sentence)
-    morphs_output_sentence.append(output_sentence)
+morphs_train_input = []
+morphs_train_output = []
 
-    input_vocab.update(input_sentence)
-    output_vocab.update(output_sentence)
-    # 단어 사전을 만들기 위한 단어 업데이트
+morphs_val_input = []
+morphs_val_output = []
 
-    input_steplen = len(input_sentence)
-    output_steplen = len(output_sentence)
-    # 현재 time step의 문장의 길이를 저장
+morphs_test_input = []
+morphs_test_output = []
+
+with open("trian_input_data.pickle", "rb") as fr:
+    morphs_train_input = pickle.load(fr)
+
+with open("train_output_data.pickle", 'rb') as fr:
+    morphs_train_output = pickle.load(fr)
+
+with open('val_input_tokens.pickle', 'rb') as fr:
+    morphs_val_input = pickle.load(fr)
+
+with open('val_output_tokens.pickle', 'rb') as fr:
+    morphs_val_output = pickle.load(fr) 
+
+with open('test_input_tokens.pickle', 'rb') as fr:
+    morphs_test_input = pickle.load(fr)
+
+with open('test_output_tokens.pickle', 'rb') as fr:
+    morphs_test_output = pickle.load(fr)
+
+with open('input_vocab.pickle', 'rb') as fr:
+    input_vocab = pickle.load(fr)
+
+with open('output_vocab.pickle', 'rb') as fr:
+    output_vocab = pickle.load(fr)
+
+
+
+dic_input_vocab = {word:i for i, word in enumerate(input_vocab)}
+dic_output_vocab = {word:i for i, word in enumerate(output_vocab)}
+
+train_input_tokens = []
+train_output_tokens = []
+
+val_input_tokens = []
+val_output_tokens = []
+
+test_input_tokens = []
+test_output_tokens = []
+
+for i, (t_input, t_output) in enumerate(zip(morphs_train_input, morphs_train_output)):
+    input_steplen = len(t_input)
+    output_steplen = len(t_output)
+
+    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in t_input] + [dic_input_vocab["<end>"]]
+    step_output =  [dic_output_vocab["<start>"] + [dic_output_vocab[word] for word in t_output] + [dic_output_vocab["<end>"]]]
+
+    train_input_tokens.append(step_input)
+    train_output_tokens.append(step_output)
+ 
+    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
+    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
+
+for i, (v_input, v_output) in enumerate(zip(morphs_val_input, morphs_val_output)):
+    input_steplen = len(t_input)
+    output_steplen = len(t_output)
+
+    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in v_input] + [dic_input_vocab["<end>"]]
+    step_output =  [dic_output_vocab["<start>"] + [dic_output_vocab[word] for word in v_output] + [dic_output_vocab["<end>"]]]
+    
+    val_input_tokens.append(step_input)
+    val_output_tokens.append(step_output)
 
     input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
     output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
-    # 문장의 최장 길이를 저장하기 위한 변수
 
-input_vocab = ['<p>', '<start>', '<end>'] + list(input_vocab)
-output_vocab = ['<p>','<start>', '<end>'] + list(output_vocab)
-# vocab에 패딩 단어, 시작 단어, 끝 단어를 추가한다.
+for i, (t_input, t_output) in enumerate(zip(morphs_test_input, morphs_test_output)):
+    input_steplen = len(t_input)
+    output_steplen = len(t_output)
 
-dic_input_vocab = {word:index for index,word in enumerate(input_vocab)}
-dic_output_vocab = {word:index for index,word in enumerate(output_vocab)}
-# 이를 딕셔너리 형태로 만들어 저장한다. 
+    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in train_input] + [dic_input_vocab["<end>"]]
+    step_output =  [dic_output_vocab["<start>"] + [dic_output_vocab[word] for word in t_output] + [dic_output_vocab["<end>"]]]
+    
+    test_input_tokens.append(step_input)
+    test_output_tokens.append(step_output)
 
-input_tokens = []
-output_tokens = []
-# 입력 문장, 출력 문장의 문장쌍을 저장할 각각의 변수 선언.
+    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
+    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
 
-for i,(inp_sen, targ_sen) in enumerate(zip(morphs_input_sentence, morphs_output_sentence)):
-    s_input_token = [[dic_input_vocab['<start>']] + [dic_input_vocab[word] for word in inp_sen] + [dic_output_vocab['<end>']]]
-    s_output_token = [[dic_output_vocab['<start>']] + [dic_output_vocab[word] for word in targ_sen] + [dic_output_vocab["<end>"]]]
-    # 각 문장의 시작과 끝을 추가하기 위한 <'start'>, <'end'>를 추가한다. 
+train_input_tokens = pad_sequences(train_input_tokens, input_max_len, padding = 'post')
+train_output_tokens = pad_sequences(train_output_tokens, output_max_len, padding = 'post')
 
-    input_tokens.append(s_input_token)
-    output_tokens.append(s_output_token)
-    # 추가된 각 문장을 변수에 추가한다.
+val_input_tokens = pad_sequences(val_input_tokens, input_max_len, padding = 'post')
+val_output_tokens = pad_sequences(val_output_tokens, output_max_len, padding = 'post')
 
-input_tokens = pad_sequences(input_tokens, input_max_len, padding = 'post')
-output_tokens = pad_sequences(output_tokens, output_max_len, padding = 'post')
+test_input_tokens = pad_sequences(test_input_tokens, input_max_len, padding = 'post')
+test_output_tokens = pad_sequences(test_output_tokens, output_max_len, padding = 'post')
 # keras의 pad_sequences 함수를 사용하여 문장을 패딩한다. 이때 패딩된 값은 0 즉 '<p>'로 패딩된다.
 
-train_input, train_output, val_input, val_output = train_test_split(input_tokens,
-                                                                    output_tokens,
-                                                                    test_size = 0.1,
-                                                                    random_state = 255)
 
 class Encoder(tf.keras.Model):
   def __init__(self, vocab_size, embedding_dim, enc_units, batch_sz):
@@ -156,7 +203,7 @@ def loss_function(real,pred):
 # 손실함수 정의
 
 @tf.function
-def train_step(inp, targ, enc_hidden, batch_num, val_input = val_input, val_output = val_output):
+def train_step(inp, targ, enc_hidden):
     loss = 0
 
     with tf.GradientTape() as tape:
@@ -181,8 +228,6 @@ def train_step(inp, targ, enc_hidden, batch_num, val_input = val_input, val_outp
 
     optimizer.apply_gradients(zip(gradients, variables))
 
-    if batch == len(input_tokens)//BATCH_SIZE -1 :
-        print('validation loss :', loss_function(val_input, val_output))
     return batch_loss
 # 모델 훈련을 위한 함수 정의
 
@@ -213,8 +258,7 @@ def validation_loss(val_input = val_input,  val_output = val_output):
             predictions = tf.argmax(predictions, 1)
             dec_input = tf.expand_dims(predictions, 1)
         loss = loss/inputs.shape[1]
-        print('{} : {}'.format(batch+1,loss))
-        
+                
         total_loss += loss
     total_loss /= int(len(val_input)/BATCH_SIZE)
     return total_loss
@@ -222,7 +266,7 @@ def validation_loss(val_input = val_input,  val_output = val_output):
 
 steps_per_epoch = len(input_tokens)//BATCH_SIZE
 
-EPOCHS = 5
+EPOCHS = 10
 
 for epoch in range(EPOCHS):
     start = time.time()
@@ -245,8 +289,9 @@ for epoch in range(EPOCHS):
     
     print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                       total_loss / steps_per_epoch))
-    print('Time taken for 1 epoch {} sec'.format(time.time() - start))
-    print('Validation loss :', validation_loss())
+    print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+    print('Validation Loss {:.4f}\n'. format(validation_loss()))
+
 
 def evaluate(sentence):
     inp = preprocess(sentence)
@@ -278,11 +323,16 @@ def evaluate(sentence):
 
     return result, sentence
 
+def return_hangul(sentence):
+    sen = []
+    for word in sentence:
+        sen.append(input_vocab[input_vocab.index[word]])
+    return sen
 def translate(sentence):
+    sentence = return_hangul(sentence)
     result, sentence = evaluate(sentence)
     print('Input: %s' % (sentence))
     print('Predicted translation: {}'.format(result))
 
-
-
-
+for i in range(len(test_input_tokens)//100):
+    print(test_input_tokens[i*100])

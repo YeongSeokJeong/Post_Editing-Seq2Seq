@@ -69,6 +69,8 @@ def make_morph_data(input_data, output_data, output_vocab, change_num):
 		new_input.append(sen3)
 		new_output.append(output_data[sample_list[i]])
 		new_output.append(output_data[sample_list[i]])
+		if i % 1000 == 0 : 
+			print('{} complete!'.format(i))
 
 	for i in range(len(new_input)):
 		input_data.append(new_input[i])
@@ -79,7 +81,8 @@ def make_morph_data(input_data, output_data, output_vocab, change_num):
 def changing_morph(vocab, sentence, option):
 	num_sen = [i for i in range(len(sentence))]
 	num_list = []
-
+	if len(sentence) < option:
+		return sentence
 	while True:
 		idx = sample(num_sen, 1)[0]
 		if idx in num_list:
