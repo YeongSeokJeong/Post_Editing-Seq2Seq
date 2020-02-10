@@ -52,9 +52,9 @@ print('train size : {}'.format(len(train_input)))
 print('val size : {}'.format(len(val_input)))
 print('test size : {}\n'.format(len(test_input)))
 
-for i,(t_input, t_output) in enumerate(zip(train_input, train_output)):
-    input_sentence = kkma.morphs(t_input)
-    output_sentence = kkma.morphs(t_output)
+for i,(tr_input, tr_output) in enumerate(zip(train_input, train_output)):
+    input_sentence = kkma.morphs(tr_input)
+    output_sentence = kkma.morphs(tr_output)
     
     morphs_train_input.append(input_sentence)
     morphs_train_output.append(output_sentence)
@@ -138,23 +138,85 @@ val_output_tokens = []
 test_input_tokens = []
 test_output_tokens = []
 
+dic_input_vocab = {word : i for i, word in enumerate(input_vocab)}
+dic_output_vocab = {word: i for i, word in enumerate(output_vocab)}
+
+
+for i, (v_input, v_output) in enumerate(zip(morphs_val_input, morphs_val_output)):
+    input_steplen = len(v_input)
+    output_steplen = len(v_output)
+
+    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in v_input] + [dic_input_vocab["<end>"]]
+    step_output =  [dic_output_vocab["<start>"]] + [dic_output_vocab[word] for word in v_output] + [dic_output_vocab["<end>"]]
+    
+    val_input_tokens.append(step_input)
+    val_output_tokens.append(step_output)
+
+    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
+    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
+
+for i, (t_input, t_output) in enumerate(zip(morphs_test_input, morphs_test_output)):
+    input_steplen = len(t_input)
+    output_steplen = len(t_output)
+
+    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in t_input] + [dic_input_vocab["<end>"]]
+    step_output =  [dic_output_vocab["<start>"]] + [dic_output_vocab[word] for word in t_output] + [dic_output_vocab["<end>"]]
+    
+    test_input_tokens.append(step_input)
+    test_output_tokens.append(step_output)
+
+    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
+    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
+
+for i, (tr_input, tr_output) in enumerate(zip(morphs_train_input, morphs_train_output)):
+    input_steplen = len(tr_input)
+    output_steplen = len(tr_output)
+    print(tr_input)
+    print(tr_output)
+
+    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in tr_input] + [dic_input_vocab["<end>"]]
+    step_output =  [dic_output_vocab["<start>"]] + [dic_output_vocab[word] for word in tr_output] + [dic_output_vocab["<end>"]]
+
+    train_input_tokens.append(step_input)
+    train_output_tokens.append(step_output)
+ 
+    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
+    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
+
+
+print('input_vocab size :', len(input_vocab))
+print('output_vocab size :', len(output_vocab))
+
+max_len = input_max_len if input_max_len > output_max_len else output_max_len
+
+train_input_tokens = pad_sequences(train_input_tokens, max_len, padding = 'post')
+train_output_tokens = pad_sequences(train_output_tokens, max_len, padding = 'post')
+
+val_input_tokens = pad_sequences(val_input_tokens, max_len, padding = 'post')
+val_output_tokens = pad_sequences(val_output_tokens, max_len, padding = 'post')
+
+test_input_tokens = pad_sequences(test_input_tokens, max_len, padding = 'post')
+test_output_tokens = pad_sequences(test_output_tokens, max_len, padding = 'post')
+
+print(train_input_tokens[0])
+
 with open("train_input_data.pickle", "wb") as fw:
-	pickle.dump(morphs_train_input, fw)
+	pickle.dump(train_input_tokens, fw)
 
 with open("train_output_data.pickle", 'wb') as fw:
-	pickle.dump(morphs_train_output, fw)
+	pickle.dump(train_output_tokens, fw)
 
 with open('val_input_tokens.pickle', 'wb') as fw:
-	pickle.dump(morphs_val_input, fw)
+	pickle.dump(val_input_tokens, fw)
 
 with open('val_output_tokens.pickle', 'wb') as fw:
-	pickle.dump(morphs_val_output, fw)
+	pickle.dump(val_output_tokens, fw)
 
 with open('test_input_tokens.pickle', 'wb') as fw:
-	pickle.dump(morphs_test_input, fw)
+	pickle.dump(test_input_tokens, fw)
 
 with open('test_output_tokens.pickle', 'wb') as fw:
-	pickle.dump(morphs_test_output, fw)
+	pickle.dump(test_output_tokens, fw)
 
 with open('input_vocab.pickle', 'wb') as fw:
 	pickle.dump(input_vocab, fw)

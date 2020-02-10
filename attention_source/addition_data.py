@@ -27,29 +27,30 @@ def make_char_data(input_data, output_data, change_num):
 		new_input.append(sen3)
 		new_output.append(output_data[sample_list[i]])
 		new_output.append(output_data[sample_list[i]])
-		
+
 	for i in range(len(new_input)):
 		input_data.append(new_input[i])
 		output_data.append(new_output[i])
 	return input_data, output_data
 
 def changing_char(vocab, sentence, option):
-  num_sen = [i for i in range(len(sentence))]
-  num_list = []
-  while True:
-    idx = sample(num_sen, 1)[0]
-    if idx in num_list:
-      continue
-    if sentence[idx] == ' ':
-      continue
-    new_char = sample(vocab, 1)[0]
-    if sentence[idx] == new_char:
-      continue
-    sentence = sentence[:idx] + new_char + sentence[idx + 1:]
-    num_list.append(idx)
-    if len(num_list) == option:
-      break
-  return sentence
+	new_sen = sentence
+	num_sen = [i for i in range(len(sentence))]
+	num_list = []
+	while True:
+	    idx = sample(num_sen, 1)[0]
+	    if idx in num_list:
+	        continue
+	    if sentence[idx] == ' ':
+	        continue
+	    new_char = sample(vocab, 1)[0]
+	    if sentence[idx] == new_char:
+	        continue
+	    new_sen = new_sen[:idx] + new_char + new_sen[idx + 1:]
+	    num_list.append(idx)
+	    if len(num_list) == option:
+	        break
+	return new_sen
 
 def make_morph_data(input_data, output_data, output_vocab, change_num):
 	output_vocab = list(output_vocab)
@@ -60,38 +61,38 @@ def make_morph_data(input_data, output_data, output_vocab, change_num):
 	new_input, new_output = [], []
 
 	for i in range(len(sample_list)):
-		sen = output_data[sample_list[i]]
+		sen = output_data[sample_list[i]].copy()
 
 		sen1 = changing_morph(output_vocab, sen, 1)
 		sen3 = changing_morph(output_vocab, sen, 3)
-
 		new_input.append(sen1)
 		new_input.append(sen3)
 		new_output.append(output_data[sample_list[i]])
 		new_output.append(output_data[sample_list[i]])
+		break
 		if i % 1000 == 0 : 
 			print('{} complete!'.format(i))
 
 	for i in range(len(new_input)):
 		input_data.append(new_input[i])
 		output_data.append(new_output[i])
-
 	return input_data, output_data
 
 def changing_morph(vocab, sentence, option):
+	new_sen = sentence.copy()
 	num_sen = [i for i in range(len(sentence))]
 	num_list = []
-	if len(sentence) < option:
-		return sentence
+	if len(new_sen) < option:
+		return new_sen
 	while True:
 		idx = sample(num_sen, 1)[0]
 		if idx in num_list:
 			continue
 		new_morph = sample(vocab, 1)[0]
-		if sentence[idx] == new_morph:
+		if new_sen[idx] == new_morph:
 			continue
-		sentence[idx] = new_morph
+		new_sen[idx] = new_morph
 		num_list.append(idx)
 		if len(num_list) == option:
 			break
-	return sentence
+	return new_sen

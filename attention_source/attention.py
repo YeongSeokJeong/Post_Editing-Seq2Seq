@@ -6,24 +6,10 @@ from konlpy.tag import Kkma
 import time
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
-from sklearn.model_selection import train_test_split
-from addition_data import * 
 import pickle
 BATCH_SIZE = 128
 embedding_dim = 300
-units =  500
-# 인코더 디코더의 순환신경망에서 사용할 은닉층 차원수 
-
-data = pd.read_csv("data_new7.csv",encoding = 'cp949')
-
-input_data = data.iloc[:,0].to_list()
-output_data = data.iloc[:,1].to_list()
-
-input_vocab,output_vocab = set(),set()
-input_max_len = 0
-output_max_len = 0
-kkma = Kkma()
-
+units = 128
 morphs_train_input = []
 morphs_train_output = []
 
@@ -33,23 +19,23 @@ morphs_val_output = []
 morphs_test_input = []
 morphs_test_output = []
 
-with open("trian_input_data.pickle", "rb") as fr:
-    morphs_train_input = pickle.load(fr)
+with open("train_input_data.pickle", "rb") as fr:
+    train_input_tokens = pickle.load(fr)
 
 with open("train_output_data.pickle", 'rb') as fr:
-    morphs_train_output = pickle.load(fr)
+    train_output_tokens = pickle.load(fr)
 
 with open('val_input_tokens.pickle', 'rb') as fr:
-    morphs_val_input = pickle.load(fr)
+    val_input_tokens = pickle.load(fr)
 
 with open('val_output_tokens.pickle', 'rb') as fr:
-    morphs_val_output = pickle.load(fr) 
+    val_output_tokens = pickle.load(fr) 
 
 with open('test_input_tokens.pickle', 'rb') as fr:
-    morphs_test_input = pickle.load(fr)
+    test_input_tokens = pickle.load(fr)
 
 with open('test_output_tokens.pickle', 'rb') as fr:
-    morphs_test_output = pickle.load(fr)
+    test_output_tokens = pickle.load(fr)
 
 with open('input_vocab.pickle', 'rb') as fr:
     input_vocab = pickle.load(fr)
@@ -58,90 +44,27 @@ with open('output_vocab.pickle', 'rb') as fr:
     output_vocab = pickle.load(fr)
 
 
-
 dic_input_vocab = {word:i for i, word in enumerate(input_vocab)}
 dic_output_vocab = {word:i for i, word in enumerate(output_vocab)}
 
-train_input_tokens = []
-train_output_tokens = []
-
-val_input_tokens = []
-val_output_tokens = []
-
-test_input_tokens = []
-test_output_tokens = []
-
-for i, (t_input, t_output) in enumerate(zip(morphs_train_input, morphs_train_output)):
-    input_steplen = len(t_input)
-    output_steplen = len(t_output)
-
-    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in t_input] + [dic_input_vocab["<end>"]]
-    step_output =  [dic_output_vocab["<start>"] + [dic_output_vocab[word] for word in t_output] + [dic_output_vocab["<end>"]]]
-
-    train_input_tokens.append(step_input)
-    train_output_tokens.append(step_output)
- 
-    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
-    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
-
-for i, (v_input, v_output) in enumerate(zip(morphs_val_input, morphs_val_output)):
-    input_steplen = len(t_input)
-    output_steplen = len(t_output)
-
-    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in v_input] + [dic_input_vocab["<end>"]]
-    step_output =  [dic_output_vocab["<start>"] + [dic_output_vocab[word] for word in v_output] + [dic_output_vocab["<end>"]]]
-    
-    val_input_tokens.append(step_input)
-    val_output_tokens.append(step_output)
-
-    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
-    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
-
-for i, (t_input, t_output) in enumerate(zip(morphs_test_input, morphs_test_output)):
-    input_steplen = len(t_input)
-    output_steplen = len(t_output)
-
-    step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in train_input] + [dic_input_vocab["<end>"]]
-    step_output =  [dic_output_vocab["<start>"] + [dic_output_vocab[word] for word in t_output] + [dic_output_vocab["<end>"]]]
-    
-    test_input_tokens.append(step_input)
-    test_output_tokens.append(step_output)
-
-    input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
-    output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
-
-train_input_tokens = pad_sequences(train_input_tokens, input_max_len, padding = 'post')
-train_output_tokens = pad_sequences(train_output_tokens, output_max_len, padding = 'post')
-
-val_input_tokens = pad_sequences(val_input_tokens, input_max_len, padding = 'post')
-val_output_tokens = pad_sequences(val_output_tokens, output_max_len, padding = 'post')
-
-test_input_tokens = pad_sequences(test_input_tokens, input_max_len, padding = 'post')
-test_output_tokens = pad_sequences(test_output_tokens, output_max_len, padding = 'post')
-# keras의 pad_sequences 함수를 사용하여 문장을 패딩한다. 이때 패딩된 값은 0 즉 '<p>'로 패딩된다.
-
-
 class Encoder(tf.keras.Model):
-  def __init__(self, vocab_size, embedding_dim, enc_units, batch_sz):
-    super(Encoder, self).__init__()
-    self.batch_sz = batch_sz
-    self.enc_units = enc_units
-    self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
-    self.gru = tf.keras.layers.GRU(self.enc_units,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   recurrent_initializer='glorot_uniform')
+    def __init__(self, vocab_size, embedding_dim, gru_hidden, batch_sz):
+        super(Encoder, self).__init__()
+        self.batch_sz = batch_sz
+        self.gru_hidden = gru_hidden
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+        self.gru = tf.keras.layers.GRU(self.gru_hidden,
+                                       return_sequences=True,
+                                       return_state=True,
+                                       recurrent_initializer='glorot_uniform')
 
-  def call(self, x, hidden):
-    x = self.embedding(x)
-    output, state = self.gru(x, initial_state = hidden)
-    return output, state
-  # Encoder 선언후 호출시에 실행되는 함수
+    def call(self, x, hidden):
+        x = self.embedding(x)
+        output, state = self.gru(x, initial_state = hidden)
+        return output, state
 
-  def initialize_hidden_state(self):
-    return tf.zeros((self.batch_sz, self.enc_units))
-  # Encoder의 순환 신경망의 hidden_state를 초기화 하기위한 함수 정의
-encoder = Encoder(len(input_vocab), embedding_dim = 300, enc_units = 200, batch_sz = BATCH_SIZE)
+    def initialize_hidden_state(self):
+        return tf.zeros((self.batch_sz, self.gru_hidden))
 
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self,units):
@@ -172,7 +95,7 @@ class Decoder(tf.keras.Model):
         super(Decoder,self).__init__()
         self.batch_sz = batch_sz
         self.dec_units = dec_units
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding)
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
         self.gru = tf.keras.layers.GRU(self.dec_units,
                                       return_sequences=True,
                                       return_state = True,
@@ -189,7 +112,6 @@ class Decoder(tf.keras.Model):
         output = tf.reshape(output,(-1,output.shape[2]))
         x = self.fc(output)
         return x, state, attention_weights
-
 optimizer = tf.keras.optimizers.Adam()
 # 최적화 함수 정의
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = True, reduction = 'none')
@@ -202,7 +124,6 @@ def loss_function(real,pred):
     return tf.reduce_mean(loss_)
 # 손실함수 정의
 
-@tf.function
 def train_step(inp, targ, enc_hidden):
     loss = 0
 
@@ -229,12 +150,11 @@ def train_step(inp, targ, enc_hidden):
     optimizer.apply_gradients(zip(gradients, variables))
 
     return batch_loss
-# 모델 훈련을 위한 함수 정의
 
-def validation_loss(val_input = val_input,  val_output = val_output):
+def validation_loss(val_input = val_input_tokens,  val_output = val_output_tokens):
     total_loss = 0
 
-    for batch in range( int(len(val_input)/BATCH_SIZE)):
+    for batch in range(int(len(val_input)/BATCH_SIZE)):
         loss = 0
 
         test_input = val_input[BATCH_SIZE * batch: BATCH_SIZE  * (batch + 1)]
@@ -247,12 +167,10 @@ def validation_loss(val_input = val_input,  val_output = val_output):
 
         dec_hidden = enc_hidden
         dec_input = tf.expand_dims([dic_input_vocab['<start>']] * BATCH_SIZE, 1)
-
-        for t in range(inputs.shape[1]):
+        for t in range(inputs.shape[1]-1):
             predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
 
             attention_weights = tf.reshape(attention_weights, (-1,))
-
             loss += loss_function(test_output[:, t], predictions) 
 
             predictions = tf.argmax(predictions, 1)
@@ -263,10 +181,12 @@ def validation_loss(val_input = val_input,  val_output = val_output):
     total_loss /= int(len(val_input)/BATCH_SIZE)
     return total_loss
 
+encoder = Encoder(len(input_vocab), embedding_dim = embedding_dim, gru_hidden = units, batch_sz = BATCH_SIZE)
+decoder = Decoder(len(output_vocab), embedding_dim, units, BATCH_SIZE)
 
-steps_per_epoch = len(input_tokens)//BATCH_SIZE
+steps_per_epoch = len(train_input_tokens)//BATCH_SIZE
 
-EPOCHS = 10
+EPOCHS = 3
 
 for epoch in range(EPOCHS):
     start = time.time()
@@ -274,9 +194,9 @@ for epoch in range(EPOCHS):
     enc_hidden = encoder.initialize_hidden_state()
     total_loss = 0
 
-    for batch in range(len(input_tokens)//BATCH_SIZE):
-        batch_input = input_tokens[batch*BATCH_SIZE: (batch+1)*BATCH_SIZE]
-        batch_output = output_tokens[batch*BATCH_SIZE: (batch+1)*BATCH_SIZE]
+    for batch in range(len(train_input_tokens)//BATCH_SIZE):
+        batch_input = train_input_tokens[batch*BATCH_SIZE: (batch+1)*BATCH_SIZE]
+        batch_output = train_output_tokens[batch*BATCH_SIZE: (batch+1)*BATCH_SIZE]
 
         batch_loss = train_step(batch_input, batch_output, enc_hidden)
         total_loss += batch_loss
@@ -292,11 +212,10 @@ for epoch in range(EPOCHS):
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
     print('Validation Loss {:.4f}\n'. format(validation_loss()))
 
-
 def evaluate(sentence):
-    inp = preprocess(sentence)
+    inp = sentence
 
-    inputs = tf.convert_to_tensor(inp)
+    inputs = tf.convert_to_tensor([inp])
 
     result = ''
     
@@ -324,15 +243,30 @@ def evaluate(sentence):
     return result, sentence
 
 def return_hangul(sentence):
-    sen = []
-    for word in sentence:
-        sen.append(input_vocab[input_vocab.index[word]])
-    return sen
-def translate(sentence):
-    sentence = return_hangul(sentence)
-    result, sentence = evaluate(sentence)
-    print('Input: %s' % (sentence))
-    print('Predicted translation: {}'.format(result))
+  sen = []
+  for word in sentence:
+    sen.append(input_vocab[word])
+  print(sen)
+  return sen
 
-for i in range(len(test_input_tokens)//100):
-    print(test_input_tokens[i*100])
+def translate(sentence):
+    result, sentence = evaluate(sentence)
+    kk = return_hangul(sentence)
+    print('Input: ' , end = " ")
+    for word in sentence:
+        if word == '<p>':
+            break
+        print(word, end = ' ')
+    print('Predicted translation: {}'.format(result))
+    return sentence, result
+
+with open("output.txt", 'w') as f:
+    for i in range(len(test_input_tokens)//1000):
+        inp, oup = translate(test_input_tokens[i*1000])
+        sen_inp = ''
+        for word in inp:
+            if word == '<p>':
+                break
+            sen_inp += word
+        f.write('input : ' + word + '\n')
+        f.write('predict : ' + oup + '\n')
