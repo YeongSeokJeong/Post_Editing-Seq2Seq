@@ -96,3 +96,49 @@ def changing_morph(vocab, sentence, option):
 		if len(num_list) == option:
 			break
 	return new_sen
+
+def make_word_data(input_data, output_data, output_vocab, change_num):
+	output_vocab = list(output_vocab)
+	num_list = [i for i in range(len(output_data))]
+
+	sample_list = sample(num_list, change_num)
+	new_input, new_output = [], []
+
+	for i in range(len(sample_list)):
+		sen = output_data[sample_list[i]].copy()
+
+		cnt_list = [i for i in range(int(len(sen)* 0.7))]
+		if len(cnt_list) < 2:
+			random_num = [0, 1]
+		else:
+			random_num = sample(cnt_list, 2)
+		sen1 = changing_word(output_vocab, sen, random_num[0])
+		sen2 = changing_word(output_vocab, sen, random_num[1])
+		new_input.append(sen1)
+		new_input.append(sen2)
+		new_output.append(output_data[sample_list[i]])
+		new_output.append(output_data[sample_list[i]])
+
+		if i % 5000 == 0:
+			print('completed {} sentence !!'.format(i))
+
+
+
+def changing_word(vocab, sentence, option):
+	new_sen = sentence.copy()
+	num_sen = [i for i in range(len(sentence))]
+	num_list = []
+	if len(new_sen) < option:
+		return new_sen
+	while True:
+		idx = sample(num_sen, 1)[0]
+		if idx in num_list:
+			continue
+		new_word = sample(vocab, 1)[0]
+		if new_sen[idx] == new_word:
+			continue
+		new_sen[idx] = new_word
+		num_list.append(idx)
+		if len(num_list) == option:
+			break
+	return new_sen
