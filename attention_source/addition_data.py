@@ -1,7 +1,7 @@
 from random import sample
 from konlpy.tag import Kkma
 import pandas as pd
-
+import sys
 def make_char_data(input_data, output_data, change_num):
 
 	char = [ch for sen in output_data for ch in sen]
@@ -97,37 +97,54 @@ def changing_morph(vocab, sentence, option):
 			break
 	return new_sen
 
-def make_word_data(input_data, output_data, output_vocab, change_num):
-	output_vocab = list(output_vocab)
+def make_word_data(input_data, output_data, input_vocab, change_num):
+	output_vocab = list(input_vocab)
+	input_vocab = set(input_vocab)
 	num_list = [i for i in range(len(output_data))]
 
 	sample_list = sample(num_list, change_num)
 	new_input, new_output = [], []
 
 	for i in range(len(sample_list)):
+
 		sen = output_data[sample_list[i]].copy()
 
-		cnt_list = [i for i in range(int(len(sen)* 0.7))]
-		if len(cnt_list) < 2:
-			random_num = [0, 1]
-		else:
+		cnt_list = [i for i in range(1,int(len(sen)* 0.7))]
+
+		if len(cnt_list) > 2:
 			random_num = sample(cnt_list, 2)
+		else:
+			continue
 		sen1 = changing_word(output_vocab, sen, random_num[0])
 		sen2 = changing_word(output_vocab, sen, random_num[1])
+		try:
+			input_vocab.update(sen1)
+			input_vocab.update(sen2)
+		except:
+			print(sen1)
+			print(sen2)
+			sys.exit()
+
 		new_input.append(sen1)
 		new_input.append(sen2)
 		new_output.append(output_data[sample_list[i]])
 		new_output.append(output_data[sample_list[i]])
 
 		if i % 5000 == 0:
-			print('completed {} sentence !!'.format(i))
+			print('completed %d sentence !!' %i)
 
+	for i in range(len(new_input)):
+		input_data.append(new_input[i])
+		output_data.append(new_output[i])
+
+	return input_data, output_data, list(input_vocab)
 
 
 def changing_word(vocab, sentence, option):
 	new_sen = sentence.copy()
 	num_sen = [i for i in range(len(sentence))]
 	num_list = []
+
 	if len(new_sen) < option:
 		return new_sen
 	while True:
