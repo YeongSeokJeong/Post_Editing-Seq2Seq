@@ -5,7 +5,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras import  Model
 import pickle
 import time
-import nltk.translate.bleu_score as bleu
+from nltk.translate.bleu_score import sentence_bleu
 BATCH_SIZE = 128
 
 embedding_dim = 300
@@ -46,6 +46,9 @@ with open('./data/word_input_vocab.pickle', 'rb') as fr:
 
 with open('./data/word_output_vocab.pickle', 'rb') as fr:
 	words_output_vocab = pickle.load(fr)
+
+words_train_input = words_train_input
+words_train_output = words_train_output
 
 dic_input_vocab = {word:i for i, word in enumerate(words_input_vocab)}
 dic_output_vocab = {word:i for i, word in enumerate(words_output_vocab)}
@@ -169,23 +172,26 @@ def validation_loss(val_input = words_val_input, val_output = words_val_output):
 		dec_hidden = enc_hidden
 		dec_input = tf.expand_dims([dic_input_vocab['<start>']] * BATCH_SIZE, 1)
 
-		predict = [[] for i in range(128)]
+		predict = [[] for i in range(BATCH_SIZE)]
 
 		for t in range(inputs.shape[1]):
-		    predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
+			predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
 
-		    attention_weights = tf.reshape(attention_weights, (-1,))
+			attention_weights = tf.reshape(attention_weights, (-1,))
 
-		    predictions = tf.argmax(predictions, 1)
-		    for i in range(BATCH_SIZE):
-		    	predict[i].append(predictions[i])
-		    dec_input = tf.expand_dims(predictions, 1)
+			predictions = tf.argmax(predictions, 1)
 
-	    for i in range(BATCH_SIZE):
-	    	loss += bleu(predict[i], test_output[i])
-	    
+			dec_input = tf.expand_dims(predictions, 1)
+
+			for i in range(BATCH_SIZE):
+				predict[i].append(predictions[i].numpy())
+		predict = np.array(predict)
+
+		for i in range(BATCH_SIZE):
+			loss += sentence_bleu([predict[i]], test_output[i])
+
 		loss = loss/BATCH_SIZE
-        
+
 		total_loss += loss
 	total_loss /= int(len(val_input)/BATCH_SIZE)
 	return total_loss
