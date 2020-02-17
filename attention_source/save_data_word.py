@@ -131,24 +131,24 @@ print('val size : {}'.format(len(word_val_input)))
 print('test size : {}\n'.format(len(word_test_input)))
 
 
-input_vocab = ['<p>', '<start>', '<end>'] + list(word_input_vocab)
-output_vocab = ['<p>','<start>', '<end>'] + list(word_output_vocab)
+words_input_vocab = ['<p>', '<start>', '<end>'] + list(word_input_vocab)
+words_output_vocab = ['<p>','<start>', '<end>'] + list(word_output_vocab)
 # vocab에 패딩 단어, 시작 단어, 끝 단어를 추가한다.
 
-train_input_tokens = []
-train_output_tokens = []
+words_train_input = []
+words_train_output = []
 
-val_input_tokens = []
-val_output_tokens = []
+words_val_input = []
+words_val_output = []
 
-test_input_tokens = []
-test_output_tokens = []
+words_test_input = []
+words_test_output = []
 
-dic_input_vocab = {word : i for i, word in enumerate(input_vocab)}
-dic_output_vocab = {word: i for i, word in enumerate(output_vocab)}
+dic_input_vocab = {word : i for i, word in enumerate(words_input_vocab)}
+dic_output_vocab = {word: i for i, word in enumerate(words_output_vocab)}
 
-print("input_vocab size", len(input_vocab))
-print("output_vocab size", len(output_vocab))
+print("input_vocab size", len(words_input_vocab))
+print("output_vocab size", len(words_output_vocab))
 
 
 for i, (v_input, v_output) in enumerate(zip(word_val_input, word_val_output)):
@@ -161,8 +161,8 @@ for i, (v_input, v_output) in enumerate(zip(word_val_input, word_val_output)):
 	step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in v_input] + [dic_input_vocab["<end>"]]
 	step_output =  [dic_output_vocab["<start>"]] + [dic_output_vocab[word] for word in v_output] + [dic_output_vocab["<end>"]]
 
-	val_input_tokens.append(step_input)
-	val_output_tokens.append(step_output)
+	words_val_input.append(step_input)
+	words_val_output.append(step_output)
 
 	input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
 	output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
@@ -179,8 +179,8 @@ for i, (t_input, t_output) in enumerate(zip(word_test_input, word_test_output)):
 	step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in t_input] + [dic_input_vocab["<end>"]]
 	step_output =  [dic_output_vocab["<start>"]] + [dic_output_vocab[word] for word in t_output] + [dic_output_vocab["<end>"]]
 
-	test_input_tokens.append(step_input)
-	test_output_tokens.append(step_output)
+	words_test_input.append(step_input)
+	words_test_output.append(step_output)
 
 	input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
 	output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
@@ -197,47 +197,48 @@ for i, (tr_input, tr_output) in enumerate(zip(word_train_input, word_train_outpu
 	step_input = [dic_input_vocab["<start>"]] + [dic_input_vocab[word] for word in tr_input] + [dic_input_vocab["<end>"]]
 	step_output =  [dic_output_vocab["<start>"]] + [dic_output_vocab[word] for word in tr_output] + [dic_output_vocab["<end>"]]
 
-	train_input_tokens.append(step_input)
-	train_output_tokens.append(step_output)
+	words_train_input.append(step_input)
+	words_train_output.append(step_output)
 
 	input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
 	output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
 
 	
-print('input_vocab size :', len(input_vocab))
-print('output_vocab size :', len(output_vocab))
+print('input_vocab size :', len(words_input_vocab))
+print('output_vocab size :', len(words_output_vocab))
 
 max_len = input_max_len if input_max_len > output_max_len else output_max_len
 
-train_input_tokens = pad_sequences(train_input_tokens, max_len, padding = 'post')
-train_output_tokens = pad_sequences(train_output_tokens, max_len, padding = 'post')
+words_train_input = pad_sequences(words_train_input, max_len, padding = 'post')
+words_train_output = pad_sequences(words_train_output, max_len, padding = 'post')
 
-val_input_tokens = pad_sequences(val_input_tokens, max_len, padding = 'post')
-val_output_tokens = pad_sequences(val_output_tokens, max_len, padding = 'post')
+words_val_input = pad_sequences(words_val_input, max_len, padding = 'post')
+words_val_output = pad_sequences(words_val_output, max_len, padding = 'post')
 
-test_input_tokens = pad_sequences(test_input_tokens, max_len, padding = 'post')
-test_output_tokens = pad_sequences(test_output_tokens, max_len, padding = 'post')
+words_test_input = pad_sequences(words_test_input, max_len, padding = 'post')
+words_test_output = pad_sequences(words_test_output, max_len, padding = 'post')
+
 
 with open("./data/train_word_input_data.pickle", "wb") as fw:
-	pickle.dump(train_input_tokens, fw)
+	pickle.dump(words_train_input, fw)
 
 with open("./data/train_word_output_data.pickle", 'wb') as fw:
-	pickle.dump(train_output_tokens, fw)
+	pickle.dump(words_train_output, fw)
 
 with open('./data/val_word_input_tokens.pickle', 'wb') as fw:
-	pickle.dump(val_input_tokens, fw)
+	pickle.dump(words_val_input, fw)
 
 with open('./data/val_word_output_tokens.pickle', 'wb') as fw:
-	pickle.dump(val_output_tokens, fw)
+	pickle.dump(words_val_output, fw)
 
 with open('./data/test_word_input_tokens.pickle', 'wb') as fw:
-	pickle.dump(test_input_tokens, fw)
+	pickle.dump(words_test_input, fw)
 
 with open('./data/test_word_output_tokens.pickle', 'wb') as fw:
-	pickle.dump(test_output_tokens, fw)
+	pickle.dump(words_test_output, fw)
 
 with open('./data/word_input_vocab.pickle', 'wb') as fw:
-	pickle.dump(word_input_vocab, fw)
+	pickle.dump(words_input_vocab, fw)
 
 with open('./data/word_output_vocab.pickle', 'wb') as fw:
-	pickle.dump(word_output_vocab, fw)
+	pickle.dump(words_output_vocab, fw)

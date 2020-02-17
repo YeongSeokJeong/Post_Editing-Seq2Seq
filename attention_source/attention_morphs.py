@@ -19,33 +19,36 @@ morphs_val_output = []
 morphs_test_input = []
 morphs_test_output = []
 
-with open("train_input_data.pickle", "rb") as fr:
+with open("./data/train_input_data.pickle", "rb") as fr:
     train_input_tokens = pickle.load(fr)
 
-with open("train_output_data.pickle", 'rb') as fr:
+with open("./data/train_output_data.pickle", 'rb') as fr:
     train_output_tokens = pickle.load(fr)
 
-with open('val_input_tokens.pickle', 'rb') as fr:
+with open('./data/val_input_tokens.pickle', 'rb') as fr:
     val_input_tokens = pickle.load(fr)
 
-with open('val_output_tokens.pickle', 'rb') as fr:
+with open('./data/val_output_tokens.pickle', 'rb') as fr:
     val_output_tokens = pickle.load(fr) 
 
-with open('test_input_tokens.pickle', 'rb') as fr:
+with open('./data/test_input_tokens.pickle', 'rb') as fr:
     test_input_tokens = pickle.load(fr)
 
-with open('test_output_tokens.pickle', 'rb') as fr:
+with open('./data/test_output_tokens.pickle', 'rb') as fr:
     test_output_tokens = pickle.load(fr)
 
-with open('input_vocab.pickle', 'rb') as fr:
+with open('./data/input_vocab.pickle', 'rb') as fr:
     input_vocab = pickle.load(fr)
 
-with open('output_vocab.pickle', 'rb') as fr:
+with open('./data/output_vocab.pickle', 'rb') as fr:
     output_vocab = pickle.load(fr)
 
 
 dic_input_vocab = {word:i for i, word in enumerate(input_vocab)}
 dic_output_vocab = {word:i for i, word in enumerate(output_vocab)}
+
+input_max_len = train_input_tokens.shape[1]
+output_max_len = train_output_tokens.shape[1]
 
 class Encoder(tf.keras.Model):
     def __init__(self, vocab_size, embedding_dim, gru_hidden, batch_sz):
@@ -150,6 +153,9 @@ def train_step(inp, targ, enc_hidden):
     optimizer.apply_gradients(zip(gradients, variables))
 
     return batch_loss
+
+#train_input_tokens = train_input_tokens[:1000]
+#train_output_tokens = train_output_tokens[:1000]
 
 def validation_loss(val_input = val_input_tokens,  val_output = val_output_tokens):
     total_loss = 0
@@ -260,13 +266,13 @@ def translate(sentence):
     print('Predicted translation: {}'.format(result))
     return sentence, result
 
-with open("output.txt", 'w') as f:
+with open("output_3Eopochs.txt", 'w') as f:
     for i in range(len(test_input_tokens)//1000):
         inp, oup = translate(test_input_tokens[i*1000])
         sen_inp = ''
         for word in inp:
             if word == '<p>':
                 break
-            sen_inp += word
-        f.write('input : ' + word + '\n')
+            sen_inp += input_vocab[word]
+        f.write('input : ' + sen_inp + '\n')
         f.write('predict : ' + oup + '\n')
