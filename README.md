@@ -20,5 +20,7 @@
 2020.02.06		데이터 증폭을 위한 함수 추가(형태소)
 2020.02.11 ~	어절 단위 Attention Seq2Seq를 위한 코드 작성
 2020.02.17
+2020.02.18		형태소 단위 Attention validation loss 변환
+				형태소 단위 save_data_morph.py 파일 수정
 ```
 

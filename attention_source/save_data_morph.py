@@ -38,6 +38,15 @@ train_input, test_input, train_output, test_output = train_test_split(input_data
 train_input, val_input, train_output, val_output = train_test_split(train_input,
                                                                     train_output,
                                                                     test_size = 0.125)
+'''train_input = train_input[:1000]
+train_output = train_output[:1000]
+
+val_input = val_input[:1000]
+val_output = val_output[:1000]
+
+test_input = test_input[:1000]
+test_output = test_output[:1000]
+'''
 print("original size")
 print('train size : {}'.format(len(train_input)))
 print('val size : {}'.format(len(val_input)))
@@ -200,26 +209,26 @@ test_output_tokens = pad_sequences(test_output_tokens, max_len, padding = 'post'
 
 print(train_input_tokens[0])
 
-with open("train_input_data.pickle", "wb") as fw:
+with open("./data/train_input_data.pickle", "wb") as fw:
 	pickle.dump(train_input_tokens, fw)
 
-with open("train_output_data.pickle", 'wb') as fw:
+with open("./data/train_output_data.pickle", 'wb') as fw:
 	pickle.dump(train_output_tokens, fw)
 
-with open('val_input_tokens.pickle', 'wb') as fw:
+with open('./data/val_input_tokens.pickle', 'wb') as fw:
 	pickle.dump(val_input_tokens, fw)
 
-with open('val_output_tokens.pickle', 'wb') as fw:
+with open('./data/val_output_tokens.pickle', 'wb') as fw:
 	pickle.dump(val_output_tokens, fw)
 
-with open('test_input_tokens.pickle', 'wb') as fw:
+with open('./data/test_input_tokens.pickle', 'wb') as fw:
 	pickle.dump(test_input_tokens, fw)
 
-with open('test_output_tokens.pickle', 'wb') as fw:
+with open('./data/test_output_tokens.pickle', 'wb') as fw:
 	pickle.dump(test_output_tokens, fw)
 
-with open('input_vocab.pickle', 'wb') as fw:
+with open('./data/input_vocab.pickle', 'wb') as fw:
 	pickle.dump(input_vocab, fw)
 
-with open('output_vocab.pickle', 'wb') as fw:
+with open('./data/output_vocab.pickle', 'wb') as fw:
 	pickle.dump(output_vocab, fw)

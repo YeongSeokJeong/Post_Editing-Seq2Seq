@@ -7,6 +7,8 @@ import time
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 import pickle
+from nltk.translate.bleu_score import sentence_bleu
+
 BATCH_SIZE = 128
 embedding_dim = 300
 units = 128
@@ -173,6 +175,9 @@ def validation_loss(val_input = val_input_tokens,  val_output = val_output_token
 
         dec_hidden = enc_hidden
         dec_input = tf.expand_dims([dic_input_vocab['<start>']] * BATCH_SIZE, 1)
+
+        predict_morph = [[] for i in range(BATCH_SIZE)]
+
         for t in range(inputs.shape[1]-1):
             predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
 
@@ -180,9 +185,16 @@ def validation_loss(val_input = val_input_tokens,  val_output = val_output_token
             loss += loss_function(test_output[:, t], predictions) 
 
             predictions = tf.argmax(predictions, 1)
+
+            for i in range(BATCH_SIZE):
+                predict[i].append(predictions[i].numpy())
+
             dec_input = tf.expand_dims(predictions, 1)
-        loss = loss/inputs.shape[1]
-                
+        predict = np.array(predict)
+        for i in range(BATCH_SIZE):
+            loss += sentence_bleu([predict[i]], test_output[i])
+        loss /= BATCH_SIZE
+        
         total_loss += loss
     total_loss /= int(len(val_input)/BATCH_SIZE)
     return total_loss
