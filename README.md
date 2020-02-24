@@ -1,5 +1,4 @@
-# Attention_seq2seq
-
+# Post_Editing Seq2Seq
 ### 목적
 
 음성인식 결과 자동 교정을 위한 sequence to sequence 모델링
