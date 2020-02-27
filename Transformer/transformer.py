@@ -6,6 +6,9 @@ import time
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 import pickle
+from nltk.translate.bleu_score import sentence_bleu
+from tqdm import tqdm
+
 
 BATCH_SIZE = 32
 num_layers = 6
@@ -48,6 +51,9 @@ with open('./data/output_vocab.pickle', 'rb') as fr:
 
 dic_input_vocab = {word:i for i, word in enumerate(input_vocab)}
 dic_output_vocab = {word:i for i, word in enumerate(output_vocab)}
+
+# train_input_tokens = train_input_tokens[:1000]
+# train_output_tokens = train_output_tokens[:1000]
 
 input_vocab_size = len(input_vocab)
 target_vocab_size = len(output_vocab)
@@ -295,6 +301,7 @@ def loss_function(real, pred):
 	return tf.reduce_mean(loss_)
 
 train_loss = tf.keras.metrics.Mean(name = 'train_loss')
+
 train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name = 'train_accuracy')
 
 transformer = Transformer(num_layers,
@@ -305,6 +312,44 @@ transformer = Transformer(num_layers,
                           target_vocab_size, 
                           input_vocab_size,
                           target_vocab_size)
+
+def validation_loss(inp = val_input_tokens, tar = val_output_tokens):
+    val_batch_size = 128
+    validation_batch_len = len(val_input_tokens)//val_batch_size
+    validation_loss = 0
+    for batch in tqdm(range(validation_batch_len)):
+        loss = 0
+        val_batch_input = val_input_tokens[batch * val_batch_size : (batch + 1) * val_batch_size]
+        val_batch_output = val_output_tokens[batch * val_batch_size : (batch + 1) * val_batch_size]
+
+        #val_batch_input = tf.expand_dims(val_batch_input, 0)
+
+        dec_input = tf.expand_dims([dic_output_vocab["<start>"]] * val_batch_size, 1)
+
+        predicted_output = [[] for i in range(val_batch_size)]
+
+        for i in range(input_max_len):
+            enc_padding_mask, combined_mask, dec_padding_mask = create_masks(val_batch_input, dec_input)
+
+            predictions, _ = transformer(val_batch_input,
+                                        dec_input,
+                                        False,
+                                        enc_padding_mask,
+                                        combined_mask,
+                                        dec_padding_mask)
+            #print(predictions.shape)
+            predictions = predictions[:, -1:, :]
+            predicted_id = tf.cast(tf.argmax(predictions, axis = -1), tf.int32)
+            predicted_id = np.array(tf.reshape(predicted_id, shape = (val_batch_size,)))
+            #predicted = np.array(tf.squeeze(predicted_id, axis = 1), tf.int32)
+            for i in range(val_batch_size):
+                predicted_output[i].append(predicted_id[i])
+        for i in range(val_batch_size):
+            loss += sentence_bleu([predicted_output[i]], val_batch_output[i])
+        loss /= val_batch_size
+        validation_loss += loss
+    validation_loss /= validation_batch_len
+    return validation_loss
 
 def train_step(inp, tar):
     tar_inp = tar[:, :-1]
@@ -335,4 +380,53 @@ for epoch in range(Epochs):
 
         if batch % 50 == 0:
             print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(epoch + 1, batch, train_loss.result(), train_accuracy.result()))
+    
     print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(epoch + 1, train_loss.result(), train_accuracy.result()))
+    print('time taken 1 Epochs : {}'.format(time.time() - start))
+    print('Validation_loss : {}'.format(validation_loss()))
+
+def evaluate(inp_sentence):
+    encoder_input = tf.expand_dims(inp_sentence, 0)
+
+    decoder_input = [dic_output_vocab["<start>"]]
+    output = tf.expand_dims(decoder_input, 0)
+
+    for i in range(input_max_len):
+        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(encoder_input, output)
+
+        predictions, attention_weights = transformer(encoder_input,
+                                                     output,
+                                                     False,
+                                                     enc_padding_mask,
+                                                     combined_mask,
+                                                     dec_padding_mask)
+
+        predictions = predictions[:, -1:, :]
+        predicted_id = tf.cast(tf.argmax(predictions, axis = -1), tf.int32)
+
+        if predicted_id == dic_output_vocab["<end>"]:
+            return tf.squeeze(output, axis = 0), attention_weights
+
+        output = tf.concat([output, predicted_id], axis = -1)
+
+    return tf.squeeze(output, axis = 0), attention_weights
+
+def translate(sentence):
+    result, attention_weights = evaluate(sentence)
+
+    predicted_sentence = [output_vocab[i] for i in result if i != 0]
+    inp_sentence = [input_vocab[i] for i in sentence if i != 0]
+
+    return inp_sentence, predicted_sentence
+with open("./result/transformer_10_Epochs_output.txt", 'w') as f:
+    for i in range(len(test_input_tokens)//1000):
+        inp, oup = translate(test_input_tokens[i*1000])
+        inp = ' '.join(inp)
+        oup = ' '.join(oup)
+        cor_ans = [output_vocab[i] for i in range(test_output_tokens[i * 1000]) if i != 0]
+        cor_ans = ' '.join(cor_ans)
+        f.write("input :" + inp + '\n')
+        f.write('predict :' + oup + "\n")
+        f.write('correct answer :' + cor_ans + '\n\n')
+
+    

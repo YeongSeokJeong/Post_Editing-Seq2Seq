@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import tensorflow as tf
-from konlpy.tag import Kkma
 import time
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
@@ -117,6 +116,14 @@ class Decoder(tf.keras.Model):
         output = tf.reshape(output,(-1,output.shape[2]))
         x = self.fc(output)
         return x, state, attention_weights
+
+
+strategy = tf.distribute.MirroredStrategy()
+
+
+print('Number of devices : {}'.format(strategy.num_replicas_in_sync))
+
+
 optimizer = tf.keras.optimizers.Adam()
 # 최적화 함수 정의
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = True, reduction = 'none')
@@ -182,19 +189,17 @@ def validation_loss(val_input = val_input_tokens,  val_output = val_output_token
             predictions, dec_hidden, attention_weights = decoder(dec_input, dec_hidden, enc_out)
 
             attention_weights = tf.reshape(attention_weights, (-1,))
-            loss += loss_function(test_output[:, t], predictions) 
-
             predictions = tf.argmax(predictions, 1)
 
             for i in range(BATCH_SIZE):
-                predict[i].append(predictions[i].numpy())
+                predict_morph[i].append(predictions[i].numpy())
 
             dec_input = tf.expand_dims(predictions, 1)
-        predict = np.array(predict)
+        predict_morph = np.array(predict_morph)
         for i in range(BATCH_SIZE):
-            loss += sentence_bleu([predict[i]], test_output[i])
+            loss += sentence_bleu([predict_morph[i]], test_output[i])
         loss /= BATCH_SIZE
-        
+
         total_loss += loss
     total_loss /= int(len(val_input)/BATCH_SIZE)
     return total_loss
@@ -204,7 +209,7 @@ decoder = Decoder(len(output_vocab), embedding_dim, units, BATCH_SIZE)
 
 steps_per_epoch = len(train_input_tokens)//BATCH_SIZE
 
-EPOCHS = 3
+EPOCHS = 19
 
 for epoch in range(EPOCHS):
     start = time.time()
@@ -219,7 +224,7 @@ for epoch in range(EPOCHS):
         batch_loss = train_step(batch_input, batch_output, enc_hidden)
         total_loss += batch_loss
 
-        if batch % 10 == 0:
+        if batch % 50 == 0:
             print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
                                                          batch,
                                                          batch_loss.numpy()))
@@ -228,7 +233,7 @@ for epoch in range(EPOCHS):
     print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                       total_loss / steps_per_epoch))
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
-    print('Validation Loss {:.4f}\n'. format(validation_loss()))
+    print('Validation Bleu Score : {:.4f}\n'. format(validation_loss()))
 
 def evaluate(sentence):
     inp = sentence
@@ -278,7 +283,7 @@ def translate(sentence):
     print('Predicted translation: {}'.format(result))
     return sentence, result
 
-with open("output_3Eopochs.txt", 'w') as f:
+with open("output_19Eopochs.txt", 'w') as f:
     for i in range(len(test_input_tokens)//1000):
         inp, oup = translate(test_input_tokens[i*1000])
         sen_inp = ''
@@ -288,3 +293,4 @@ with open("output_3Eopochs.txt", 'w') as f:
             sen_inp += input_vocab[word]
         f.write('input : ' + sen_inp + '\n')
         f.write('predict : ' + oup + '\n')
+        f.write('\n')
