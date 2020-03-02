@@ -7,6 +7,9 @@ from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 import pickle
 from nltk.translate.bleu_score import sentence_bleu
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 BATCH_SIZE = 128
 embedding_dim = 300
@@ -168,10 +171,10 @@ def train_step(inp, targ, enc_hidden):
 
 def validation_loss(val_input = val_input_tokens,  val_output = val_output_tokens):
     total_loss = 0
-
+    input_loss = 0
     for batch in range(int(len(val_input)/BATCH_SIZE)):
         loss = 0
-
+        inp_loss = 0
         test_input = val_input[BATCH_SIZE * batch: BATCH_SIZE  * (batch + 1)]
         test_output = val_output[BATCH_SIZE * batch: BATCH_SIZE  * (batch + 1)]
         
@@ -197,12 +200,17 @@ def validation_loss(val_input = val_input_tokens,  val_output = val_output_token
             dec_input = tf.expand_dims(predictions, 1)
         predict_morph = np.array(predict_morph)
         for i in range(BATCH_SIZE):
+            inp_loss += sentence_bleu([test_input[i]], test_output[i])
             loss += sentence_bleu([predict_morph[i]], test_output[i])
+        if t == 0:
+            print('predict_morph :', predict_morph[0])
         loss /= BATCH_SIZE
-
+        inp_loss /= BATCH_SIZE
         total_loss += loss
+        input_loss += inp_loss
     total_loss /= int(len(val_input)/BATCH_SIZE)
-    return total_loss
+    input_loss /= int(len(val_input)/BATCH_SIZE)
+    return input_loss, total_loss
 
 encoder = Encoder(len(input_vocab), embedding_dim = embedding_dim, gru_hidden = units, batch_sz = BATCH_SIZE)
 decoder = Decoder(len(output_vocab), embedding_dim, units, BATCH_SIZE)
@@ -229,11 +237,12 @@ for epoch in range(EPOCHS):
                                                          batch,
                                                          batch_loss.numpy()))
     # saving (checkpoint) the model every 2 epochs
-    
+    inp_bleu, pred_bleu = validation_loss()
     print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                       total_loss / steps_per_epoch))
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
-    print('Validation Bleu Score : {:.4f}\n'. format(validation_loss()))
+    print("Input sentence Bleu Score : {:.4f}".format(inp_bleu))
+    print('Validation Bleu Score : {:.4f}\n'. format(pred_bleu))
 
 def evaluate(sentence):
     inp = sentence
@@ -282,6 +291,7 @@ def translate(sentence):
         print(word, end = ' ')
     print('Predicted translation: {}'.format(result))
     return sentence, result
+
 
 with open("output_19Eopochs.txt", 'w') as f:
     for i in range(len(test_input_tokens)//1000):
