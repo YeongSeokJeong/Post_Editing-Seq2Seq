@@ -7,11 +7,6 @@ from sklearn.model_selection import train_test_split
 from addition_data import * 
 import pickle
 
-BATCH_SIZE = 128
-embedding_dim = 300
-units =  500
-# 인코더 디코더의 순환신경망에서 사용할 은닉층 차원수 
-
 data = pd.read_csv("data_new7.csv",encoding = 'cp949')
 
 input_data = data.iloc[:,0].to_list()
