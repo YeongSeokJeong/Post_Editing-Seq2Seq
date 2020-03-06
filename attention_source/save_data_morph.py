@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import tensorflow as tf
@@ -6,13 +5,24 @@ from konlpy.tag import Kkma
 from sklearn.model_selection import train_test_split
 from addition_data import * 
 import pickle
+import csv
+import re
+from tqdm import tqdm
 
-data = pd.read_csv("data_new7.csv",encoding = 'cp949')
+def cleanText(read_data):
+    text = re.sub('[-=+,#/\?:^$.@*\"※~&%ㆍ!』\\‘|\(\)\[\]\<\>`\'…》]', '', read_data)
+    return text
 
-input_data = data.iloc[:,0].to_list()
-output_data = data.iloc[:,1].to_list()
+input_data = []
+output_data = []
 
-input_vocab,output_vocab = set(),set()
+with open("data_new7.csv", encoding = 'cp949') as f:
+    rdr = csv.reader(f)
+    for line in rdr:
+        input_data.append(cleanText(line[0]))
+        output_data.append(cleanText(line[1]))
+
+input_vocab,output_vocab = set(), set()
 input_max_len = 0
 output_max_len = 0
 kkma = Kkma()
@@ -33,15 +43,6 @@ train_input, test_input, train_output, test_output = train_test_split(input_data
 train_input, val_input, train_output, val_output = train_test_split(train_input,
                                                                     train_output,
                                                                     test_size = 0.125)
-'''train_input = train_input[:1000]
-train_output = train_output[:1000]
-
-val_input = val_input[:1000]
-val_output = val_output[:1000]
-
-test_input = test_input[:1000]
-test_output = test_output[:1000]
-'''
 print("original size")
 print('train size : {}'.format(len(train_input)))
 print('val size : {}'.format(len(val_input)))
@@ -56,7 +57,8 @@ print('train size : {}'.format(len(train_input)))
 print('val size : {}'.format(len(val_input)))
 print('test size : {}\n'.format(len(test_input)))
 
-for i,(tr_input, tr_output) in enumerate(zip(train_input, train_output)):
+for i in tqdm(range(len(train_input))):
+    tr_input, tr_output = train_input[i], train_output[i]
     input_sentence = kkma.morphs(tr_input)
     output_sentence = kkma.morphs(tr_output)
     
@@ -72,11 +74,10 @@ for i,(tr_input, tr_output) in enumerate(zip(train_input, train_output)):
     input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
     output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
 
-    if i%5000 == 0 :
-        print('{}/{} complete train_morph!'.format(i, len(train_input)))
 print(len(input_vocab))
 
-for i,(v_input, v_output) in enumerate(zip(val_input, val_output)):
+for i in tqdm(range(len(val_input))):
+    v_input, v_output = val_input[i], val_output[i]
     input_sentence = kkma.morphs(v_input)
     output_sentence = kkma.morphs(v_output)
     
@@ -93,11 +94,10 @@ for i,(v_input, v_output) in enumerate(zip(val_input, val_output)):
     output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
 
 
-    if i%5000 == 0 :
-        print('{}/{} complete val_morph!'.format(i,len(val_input)))
 print(len(input_vocab))
 
-for i,(te_input, te_output) in enumerate(zip(test_input, test_output)):
+for i in tqdm(range(len(test_input))):
+    te_input, te_output = test_input[i], test_output[i]
     input_sentence = kkma.morphs(te_input)
     output_sentence = kkma.morphs(te_output)
     
@@ -113,8 +113,6 @@ for i,(te_input, te_output) in enumerate(zip(test_input, test_output)):
     input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
     output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
     
-    if i%5000 == 0 :
-        print('{}/{} complete test_morph!'.format(i, len(test_input)))
 print(len(input_vocab))
 
 
@@ -146,7 +144,8 @@ dic_input_vocab = {word : i for i, word in enumerate(input_vocab)}
 dic_output_vocab = {word: i for i, word in enumerate(output_vocab)}
 
 
-for i, (v_input, v_output) in enumerate(zip(morphs_val_input, morphs_val_output)):
+for i in tqdm(range(len(morphs_val_input))):
+    v_input, v_output = morphs_val_input[i], morphs_val_output[i]
     input_steplen = len(v_input)
     output_steplen = len(v_output)
 
@@ -159,7 +158,8 @@ for i, (v_input, v_output) in enumerate(zip(morphs_val_input, morphs_val_output)
     input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
     output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
 
-for i, (t_input, t_output) in enumerate(zip(morphs_test_input, morphs_test_output)):
+for i in tqdm(range(len(morphs_test_input))):
+    t_input, t_output = morphs_test_input[i], morphs_test_output[i]
     input_steplen = len(t_input)
     output_steplen = len(t_output)
 
@@ -172,7 +172,8 @@ for i, (t_input, t_output) in enumerate(zip(morphs_test_input, morphs_test_outpu
     input_max_len = input_max_len if input_max_len > input_steplen else input_steplen
     output_max_len = output_max_len if output_max_len > output_steplen else output_steplen
 
-for i, (tr_input, tr_output) in enumerate(zip(morphs_train_input, morphs_train_output)):
+for i in tqdm(range(len(morphs_train_input))):
+    tr_input, tr_output = morphs_train_input[i], morphs_train_output[i]
     input_steplen = len(tr_input)
     output_steplen = len(tr_output)
     print(tr_input)
@@ -204,26 +205,26 @@ test_output_tokens = pad_sequences(test_output_tokens, max_len, padding = 'post'
 
 print(train_input_tokens[0])
 
-with open("./data/train_input_data.pickle", "wb") as fw:
+with open("./data/train_input_data_1.pickle", "wb") as fw:
 	pickle.dump(train_input_tokens, fw)
 
-with open("./data/train_output_data.pickle", 'wb') as fw:
+with open("./data/train_output_data_1.pickle", 'wb') as fw:
 	pickle.dump(train_output_tokens, fw)
 
-with open('./data/val_input_tokens.pickle', 'wb') as fw:
+with open('./data/val_input_tokens_1.pickle', 'wb') as fw:
 	pickle.dump(val_input_tokens, fw)
 
-with open('./data/val_output_tokens.pickle', 'wb') as fw:
+with open('./data/val_output_tokens_1.pickle', 'wb') as fw:
 	pickle.dump(val_output_tokens, fw)
 
-with open('./data/test_input_tokens.pickle', 'wb') as fw:
+with open('./data/test_input_tokens_1.pickle', 'wb') as fw:
 	pickle.dump(test_input_tokens, fw)
 
-with open('./data/test_output_tokens.pickle', 'wb') as fw:
+with open('./data/test_output_tokens_1.pickle', 'wb') as fw:
 	pickle.dump(test_output_tokens, fw)
 
-with open('./data/input_vocab.pickle', 'wb') as fw:
+with open('./data/input_vocab_1.pickle', 'wb') as fw:
 	pickle.dump(input_vocab, fw)
 
-with open('./data/output_vocab.pickle', 'wb') as fw:
+with open('./data/output_vocab_1.pickle', 'wb') as fw:
 	pickle.dump(output_vocab, fw)
