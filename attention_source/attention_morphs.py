@@ -23,28 +23,28 @@ morphs_val_output = []
 morphs_test_input = []
 morphs_test_output = []
 
-with open("./data/train_input_data.pickle", "rb") as fr:
+with open("./data/train_input_data_1.pickle", "rb") as fr:
     train_input_tokens = pickle.load(fr)
 
-with open("./data/train_output_data.pickle", 'rb') as fr:
+with open("./data/train_output_data_1.pickle", 'rb') as fr:
     train_output_tokens = pickle.load(fr)
 
-with open('./data/val_input_tokens.pickle', 'rb') as fr:
+with open('./data/val_input_tokens_1.pickle', 'rb') as fr:
     val_input_tokens = pickle.load(fr)
 
-with open('./data/val_output_tokens.pickle', 'rb') as fr:
+with open('./data/val_output_tokens_1.pickle', 'rb') as fr:
     val_output_tokens = pickle.load(fr) 
 
-with open('./data/test_input_tokens.pickle', 'rb') as fr:
+with open('./data/test_input_tokens_1.pickle', 'rb') as fr:
     test_input_tokens = pickle.load(fr)
 
-with open('./data/test_output_tokens.pickle', 'rb') as fr:
+with open('./data/test_output_tokens_1.pickle', 'rb') as fr:
     test_output_tokens = pickle.load(fr)
 
-with open('./data/input_vocab.pickle', 'rb') as fr:
+with open('./data/input_vocab_1.pickle', 'rb') as fr:
     input_vocab = pickle.load(fr)
 
-with open('./data/output_vocab.pickle', 'rb') as fr:
+with open('./data/output_vocab_1.pickle', 'rb') as fr:
     output_vocab = pickle.load(fr)
 
 
@@ -217,7 +217,7 @@ decoder = Decoder(len(output_vocab), embedding_dim, units, BATCH_SIZE)
 
 steps_per_epoch = len(train_input_tokens)//BATCH_SIZE
 
-EPOCHS = 19
+EPOCHS = 18
 
 for epoch in range(EPOCHS):
     start = time.time()
@@ -243,6 +243,8 @@ for epoch in range(EPOCHS):
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
     print("Input sentence Bleu Score : {:.4f}".format(inp_bleu))
     print('Validation Bleu Score : {:.4f}\n'. format(pred_bleu))
+    if inp_bleu < pred_bleu:
+        break
 
 def evaluate(sentence):
     inp = sentence
@@ -297,10 +299,17 @@ with open("output_19Eopochs.txt", 'w') as f:
     for i in range(len(test_input_tokens)//1000):
         inp, oup = translate(test_input_tokens[i*1000])
         sen_inp = ''
+        sen_cor = ''
         for word in inp:
             if word == '<p>':
                 break
-            sen_inp += input_vocab[word]
+            sen_inp += input_vocab[word] + ' '
+        for word in test_output_tokens[i*1000]:
+            if word == '<p>':
+                break
+            else:
+                sen_cor += output_vocab[word] + ' '
         f.write('input : ' + sen_inp + '\n')
         f.write('predict : ' + oup + '\n')
+        f.write('correct output : ' + sen_cor + '\n')
         f.write('\n')

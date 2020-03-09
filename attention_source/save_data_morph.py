@@ -48,6 +48,8 @@ print('train size : {}'.format(len(train_input)))
 print('val size : {}'.format(len(val_input)))
 print('test size : {}\n'.format(len(test_input)))
 
+print('1')
+
 train_input, train_output = make_char_data(train_input, 
                                            train_output, 
                                            int(len(train_input)/2))
@@ -56,6 +58,8 @@ print("Adding char modified data size")
 print('train size : {}'.format(len(train_input)))
 print('val size : {}'.format(len(val_input)))
 print('test size : {}\n'.format(len(test_input)))
+
+
 
 for i in tqdm(range(len(train_input))):
     tr_input, tr_output = train_input[i], train_output[i]
