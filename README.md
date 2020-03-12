@@ -5,6 +5,7 @@
 
 - [Bahdanau_Attention](https://www.tensorflow.org/tutorials/text/nmt_with_attention )을 통한 교정
 - [KorBert](http://aiopen.etri.re.kr/service_dataset.php)임베딩모델 사용한 성능 향상(형태소)
+- OOV 문제 해결을 위한 [FastText](https://github.com/facebookresearch/fastText/blob/master/python/README.mdhttps://github.com/facebookresearch/fastText/blob/master/python/README.md)를 적용한 attention model
 
 ### 데이터
 
@@ -23,5 +24,7 @@
 			형태소 단위 save_data_morph.py 파일 수정
 2020.02.25 ~ 		Transformer 공부 및 [구현](https://www.tensorflow.org/tutorials/text/transformer#top_of_page)
 2020.02.28
+2020.03 ~ 		KorBERT 적용 
+2020.03.12		FastText 적용
 ```
 
