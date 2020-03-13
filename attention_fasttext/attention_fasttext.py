@@ -10,7 +10,7 @@ from nltk.translate.bleu_score import sentence_bleu
 import os
 import fasttext as ft
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
 BATCH_SIZE = 128
 embedding_dim = 300
@@ -49,7 +49,7 @@ with open('./data/output_vocab_1.pickle', 'rb') as fr:
     output_vocab = pickle.load(fr)
 
 fasttext_model = ft.load_model("wiki.ko.bin")
-
+print(type(test_input_tokens))
 # for train_inp, train_targ in zip(train_input_tokens, train_output_tokens):
 #     morphs_train_input.append(fasttext_output(train_inp))
 #     morphs_train_output.append(fasttext_output(train_targ))
@@ -96,6 +96,8 @@ class Encoder(tf.keras.Model):
 
     def embedding(self, x):
         embed_output = []
+        if type(x) is list:
+            x = np.array(x)
         if len(x.shape) == 1:
             for word in x:
                 embed_output.append(fasttext_model[input_vocab[word]])
@@ -157,6 +159,9 @@ class Decoder(tf.keras.Model):
 
     def embedding(self, x):
         embed_output = []
+        if type(x) is list:
+            x = np.array(x)
+
         if len(x.shape) == 1:
             for word in x:
                 embed_output.append(fasttext_model[output_vocab[word]])
@@ -265,7 +270,7 @@ decoder = Decoder(len(output_vocab), embedding_dim, units, BATCH_SIZE)
 
 steps_per_epoch = len(train_input_tokens)//BATCH_SIZE
 
-EPOCHS = 5
+EPOCHS = 15
 
 for epoch in range(EPOCHS):
     start = time.time()
@@ -343,7 +348,7 @@ def translate(sentence):
     return sentence, result
 
 
-with open("output_19Eopochs.txt", 'w') as f:
+with open("output_1Eopochs.txt", 'w') as f:
     for i in range(len(test_input_tokens)//1000):
         inp, oup = translate(test_input_tokens[i*1000])
         sen_inp = ''
