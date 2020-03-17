@@ -7,9 +7,13 @@
 - [KorBert](http://aiopen.etri.re.kr/service_dataset.php)임베딩모델 사용한 성능 향상(형태소)
 - OOV 문제 해결을 위한 [FastText](https://github.com/facebookresearch/fastText/blob/master/python/README.mdhttps://github.com/facebookresearch/fastText/blob/master/python/README.md)를 적용한 attention model
 
+---
+
 ### 데이터
 
 구글 음성인식기를 통한 뉴스의 음성정보 데이터 사용(9.6만 문장)
+
+---
 
 ### 진행사항
 
@@ -26,5 +30,12 @@
 2020.02.28
 2020.03 ~ 		KorBERT 적용 
 2020.03.12		FastText 적용
+2020.03.17		성능 측정을 위한 WER알고리즘 추가
 ```
+
+---
+
+### 성능 측정
+
+[WER(Word Error Rate)](https://github.com/zszyellow/WER-in-python) 알고리즘을 사용한 측정
 
