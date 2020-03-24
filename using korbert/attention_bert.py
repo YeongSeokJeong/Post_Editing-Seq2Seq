@@ -280,7 +280,7 @@ def evaluate(sentence):
 
         result += ids_to_token_vocab[predicted_id] + ' '
         
-        if output_vocab[predicted_id] == '[SEP]':
+        if ids_to_token_vocab[predicted_id] ==  '[SEP]', '[CLS]', '[MASK]', '[PAD]']:
             return result, sentence
         dec_input = tf.expand_dims([predicted_id], 0)
 
@@ -288,13 +288,7 @@ def evaluate(sentence):
 
 def translate(sentence):
     result, sentence = evaluate(sentence)
-    kk = tokenizer.convert_ids_to_tokens(ids_to_token_vocab, sentence)
-    #print('Input: ' , end = " ")
-    for word in sentence:
-        if word == '[PAD]':
-            break
-        # print(word, end = ' ')
-    # print('Predicted translation: {}'.format(result))
+    kk = [ids_to_token_vocab[word] for word in  sentence if word not in [0, 1, 2, 3]]
     return sentence, result
 
 
@@ -304,11 +298,11 @@ with open("output_18Eopochs.txt", 'w') as f:
         sen_inp = ''
         sen_cor = ''
         for word in inp:
-            if word == '[PAD]':
+            if word not in ['[SEP]', '[CLS]', '[MASK]', '[PAD]']:
                 break
             sen_inp += ids_to_token_vocab[word] + ' '
-        for word in test_output_tokens[i]:
-            if word == '[PAD]':
+        for word in test_output_token[i]:
+            if word not in ['[SEP]', '[CLS]', '[MASK]', '[PAD]']:
                 break
             else:
                 sen_cor += ids_to_token_vocab[word] + ' '
