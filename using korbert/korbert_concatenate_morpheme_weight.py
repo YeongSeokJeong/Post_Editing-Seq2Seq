@@ -6,6 +6,8 @@ from wer import *
 import time
 import os 
 from tqdm import tqdm
+from tensorflow.keras.layers import *
+
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 BATCH_SIZE = 64
@@ -83,10 +85,10 @@ class Encoder(tf.keras.Model):
         self.cnn1d = tf.keras.layers.Conv1D(max_seq_len,3)
         self.max_pooling = tf.keras.layers.GlobalMaxPool1D()
         
-        self.lstm = tf.keras.layers.LSTM(embedding_dim,
+        self.lstm = BiDirectional(tf.keras.layers.LSTM(embedding_dim,
                                         return_sequences = True,
                                         recurrent_initializer='glorot_uniform')
-        
+                                  ) 
         self.gru = tf.keras.layers.GRU(self.gru_hidden,
                                        return_sequences=True,
                                        return_state=True,
@@ -228,3 +230,54 @@ for epoch in range(EPOCHS):
     print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                       total_loss / steps_per_epoch))
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+
+
+def evaluate(sentence,sentence2):
+    inp = sentence
+    inp2 = sentence2
+    inputs = tf.convert_to_tensor([inp])
+    inputs2 =tf.convert_to_tensor([inp2])
+    result = ''
+    
+    hidden = [tf.zeros((1, units))]
+    enc_out, enc_hidden = encoder(inputs, inputs2, hidden)
+
+    dec_hidden = enc_hidden
+    dec_input = tf.expand_dims([vocab['[CLS]']], 0)
+
+    for t in range(max_len):
+        predictions, dec_hidden, attention_weights = decoder(dec_input, 
+                                                             dec_hidden,
+                                                             enc_out)
+        attention_weights = tf.reshape(attention_weights, (-1,))
+        
+
+        predicted_id = tf.argmax(predictions[0]).numpy()
+
+        result += ids_to_token_vocab[predicted_id] + ' '
+        
+        if ids_to_token_vocab[predicted_id] ==  '[SEP]':
+            return result, sentence
+        dec_input = tf.expand_dims([predicted_id], 0)
+
+    return result, sentence
+
+def translate(sentence, sentence2):
+    result, sentence = evaluate(sentence, sentence2)
+    return sentence, result
+
+with open("new_model_5Epochs.txt", 'w') as f:
+    for i in range(len(test_input_token)):
+        inp, oup = translate(test_input_token[i],test_input_morph[i])
+        sen_inp = ''
+        sen_cor = ''
+        for word in inp:
+            if word not in [0,1,2,3]:
+                sen_inp += ids_to_token_vocab[word] + ' '            
+        for word in test_output_token[i]:
+            if word not in [0,1,2,3]:
+                sen_cor += ids_to_token_vocab[word] + ' '
+        f.write('input : ' + sen_inp + '\n')
+        f.write('predict : ' + oup + '\n')
+        f.write('correct output : ' + sen_cor + '\n')
+        f.write('\n')
